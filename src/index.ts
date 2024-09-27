@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-// import { PipeSDKObject, UsePipeSDK } from "./pipe";
 
 declare global {
   interface Window {
@@ -92,8 +91,7 @@ export type UsePipeSDK = (callback: (PipeSDK: PipeSDKObject) => void) => {
   isLoaded: boolean;
 };
 
-
-export const usePipeSDK = (callback: (PipeSDK: PipeSDKObject) => void) => {
+export const usePipeSDK: UsePipeSDK = (callback: (PipeSDK: PipeSDKObject) => void) => {
   const [isLoaded, setIsLoaded] = useState<boolean>(false);
 
   useEffect(() => {
