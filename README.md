@@ -187,8 +187,11 @@ For more detailed embed code options, refer to the [Addpipe Embed Code Options](
 
 ### Keywords
 - Video Recorder
+- Video Recording
 - Audio Recorder
+- Audio Recording
 - Screen Recorder
+- Screen Recording
 - Camera Recorder
 - React Video Recorder
 - React Audio Recorder
