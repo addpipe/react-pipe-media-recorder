@@ -91,7 +91,7 @@ export type UsePipeSDK = (callback: (PipeSDK: PipeSDKObject) => void) => {
   isLoaded: boolean;
 };
 
-export const usePipeSDK: UsePipeSDK = (callback: (PipeSDK: PipeSDKObject) => void) => {
+export const usePipeSDK: UsePipeSDK = (callback) => {
   const [isLoaded, setIsLoaded] = useState<boolean>(false);
 
   useEffect(() => {
