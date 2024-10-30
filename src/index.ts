@@ -87,11 +87,14 @@ export type PipeSDKObject = {
   [key: string]: any;
 };
 
-export type UsePipeSDK = (callback: (PipeSDK: PipeSDKObject) => void) => {
+export type UsePipeSDK = (
+  callback: (PipeSDK: PipeSDKObject) => void,
+  useS1?: boolean
+) => {
   isLoaded: boolean;
 };
 
-export const usePipeSDK: UsePipeSDK = (callback) => {
+export const usePipeSDK: UsePipeSDK = (callback, useS1 = false) => {
   const [isLoaded, setIsLoaded] = useState<boolean>(false);
 
   useEffect(() => {
@@ -105,16 +108,19 @@ export const usePipeSDK: UsePipeSDK = (callback) => {
     if (!isLoaded) {
       // Only insert into head if global instance of PipeSDK does not already exists
       if (!window.PipeSDK) {
+        // Where to load the resources from: CDN or S1
+        const loadFrom = useS1 ? "s1" : "cdn";
+
         // Insert pipe.js
         const script = document.createElement("script");
-        script.src = "https://cdn.addpipe.com/2.0/pipe.min.js";
+        script.src = `https://${loadFrom}.addpipe.com/2.0/pipe.min.js`;
         script.onload = loadPipeSDK;
         document.head.appendChild(script);
 
         // Insert pipe.css
         const stylesheet = document.createElement("link");
         stylesheet.rel = "stylesheet";
-        stylesheet.href = "https://cdn.addpipe.com/2.0/pipe.css";
+        stylesheet.href = `https://${loadFrom}.addpipe.com/2.0/pipe.css`;
         document.head.appendChild(stylesheet);
       } else {
         loadPipeSDK();

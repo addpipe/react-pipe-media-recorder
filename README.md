@@ -87,9 +87,9 @@ const SingleRecorder = () => {
 export default SingleRecorder;
 ```
 
-### Inserting multiple recorders into the page
+### Inserting multiple recorders into the page and loading from S1
 
-This example demonstrates how to insert multiple Pipe recorders into the page.
+This example demonstrates how to insert multiple Pipe recorders into the page and also load Pipe from our S1 client delivery servers, rather than our CDN.
 
 ```jsx
 import { useState } from "react";
@@ -116,7 +116,7 @@ const MultipleRecorders = () => {
 
     // Store PipeSDK into a state for controlling the recorders later
     setPipeSdk(PipeSDK);
-  });
+  }, true); // Adding "true" will make it so that Pipe is loaded from our S1 client delivery servers
 
   // Function to start a new recording using PipeSDK
   const startRecording = (recorderId) => {
