@@ -55,6 +55,7 @@ export type RecorderObject = {
   btPlayPressed: (recorderId: string) => void;
   btRecordPressed: (recorderId: string) => void;
   btStopRecordingPressed: (recorderId: string) => void;
+  onReadyToRecord: (recorderId: string, recorderType: string) => void;
   onCamAccess: (recorderId: string, allowed: boolean) => void;
   onConnectionClosed: (recorderId: string) => void;
   onConnectionStatus: (recorderId: string, status: string) => void;
