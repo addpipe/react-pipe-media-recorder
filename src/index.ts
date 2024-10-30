@@ -62,7 +62,6 @@ export type RecorderObject = {
   onDesktopVideoUploadProgress: (recorderId: string, percent: string | number) => void;
   onDesktopVideoUploadStarted: (recorderId: string, filename: string, filetype: string, audioOnly: boolean) => void;
   onDesktopVideoUploadSuccess: (recorderId: string, filename: string, filetype: string, videoId: string, audioOnly: boolean, location: string) => void;
-  onFlashReady: (recorderId: string) => void;
   onMicActivityLevel: (recorderId: string, currentActivityLevel: number) => void;
   onPlaybackComplete: (recorderId: string, recorderType: string) => void;
   onRecordingStarted: (recorderId: string) => void;
