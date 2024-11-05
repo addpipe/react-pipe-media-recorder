@@ -1,6 +1,6 @@
 {
   "name": "@addpipe/react-pipe-media-recorder",
-  "version": "1.0.0",
+  "version": "1.0.3",
   "description": "A React custom hook that integrates the addpipe.com recording client",
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
@@ -14,6 +14,7 @@
     "type": "git",
     "url": "https://github.com/addpipe/react-pipe-media-recorder"
   },
+  "homepage": "https://github.com/serverless/serverless#readme",
   "keywords": [
     "pipe",
     "recorder",
