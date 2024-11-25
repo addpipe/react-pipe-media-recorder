@@ -30,7 +30,7 @@ npm install @addpipe/react-pipe-media-recorder
 
 ## Usage Examples
 
-👉 **Working Demo**: You can find a working demo [here](https://addpipe.com/react-demo/). The demo is available in both JavaScript and TypeScript React. Find more about it [here](https://addpipe.com/react-demo/).
+👉 **Working Demo**: You can find a working demo [here](https://addpipe.com/react-demo/). The source code for the demo is available in both JavaScript and TypeScript React. Find more about it [here](https://addpipe.com/react-demo/).
 
 ### Inserting a single recorder into the page
 
