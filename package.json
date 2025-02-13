@@ -1,6 +1,6 @@
 {
   "name": "@addpipe/react-pipe-media-recorder",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "description": "A React custom hook that integrates the addpipe.com recording client",
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
@@ -31,6 +31,9 @@
   ],
   "author": "addpipe",
   "license": "MIT",
+  "peerDependencies": {
+    "react": ">=16.8.0"
+  },
   "devDependencies": {
     "@babel/cli": "^7.25.6",
     "@babel/core": "^7.25.2",
