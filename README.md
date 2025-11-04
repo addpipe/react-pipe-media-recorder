@@ -44,7 +44,7 @@ import usePipeSDK from "@addpipe/react-pipe-media-recorder"; // Importing the Pi
 const SingleRecorder = () => {
   // Storing the generated recorder inside of a state - optional
   const [recorder, setRecorder] = useState(null);
-  const [canRecord, setCanRecord] = useState(null);
+  const [canRecord, setCanRecord] = useState(false);
 
   // Using the Pipe recorder custom hook
   const { isLoaded } = usePipeSDK((PipeSDK) => {
