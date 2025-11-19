@@ -93,9 +93,73 @@ const SingleRecorder = () => {
 export default SingleRecorder;
 ```
 
-### Inserting multiple recorders into the page and loading from S1
+### Inserting a single recorder into the page, loading from S1 and using a custom version
 
-This example demonstrates how to insert multiple Pipe recorders into the page and also load Pipe from our S1 client delivery servers, rather than our CDN.
+In this example, we insert a single Pipe recorder into the page and control it using the recorder's API (`record()` and `stopVideo()`). We load it from S1 and use a custom build version.
+
+```jsx
+import { useState } from "react";
+import usePipeSDK from "@addpipe/react-pipe-media-recorder"; // Importing the Pipe recorder npm package
+
+// Inserting a single Pipe recorder into the page
+const SingleRecorder = () => {
+  // Storing the generated recorder inside of a state - optional
+  const [recorder, setRecorder] = useState(null);
+  const [canRecord, setCanRecord] = useState(false);
+
+  // Using the Pipe recorder custom hook with S1 and custom build slug
+  const { isLoaded } = usePipeSDK((PipeSDK) => {
+    // Check to make sure the code below is only executed on the initial load
+    if (isLoaded) return;
+
+    // Prepare the parameters needed to generate a new recorder
+    const pipeParams = { size: { width: 640, height: 390 }, qualityurl: "avq/360p.xml", accountHash: "YOUR_ACCOUNT_HASH", eid: "YOUR_ENV_CODE", mrt: 600, avrec: 1 };
+
+    // Inserting a new recorder into the page
+    PipeSDK.insert("custom-id", pipeParams, (pipeRecorder) => {
+      setRecorder(pipeRecorder); // Store the recorder instance for later use
+      pipeRecorder.onReadyToRecord = () => {
+        setCanRecord(true);
+      }
+    });
+  }, {
+    useS1: true,
+    buildSlug: "BUILD_SLUG"
+  });
+
+  // Function to start a new recording using the recorder's API
+  const startRecording = () => {
+    if (!recorder || !canRecord) return;
+    recorder.record(); // Call to start recording
+  };
+
+  // Function to stop a recording using the recorder's API
+  const stopRecording = () => {
+    if (!recorder || !canRecord) return;
+    recorder.stopVideo(); // Call to stop recording
+  };
+
+  return (
+    <div>
+      {!isLoaded && <div>Loading the Pipe recorder</div>}
+      <div id="custom-id"></div> {/* Placeholder for where the new recorder should be inserted */}
+      {isLoaded && recorder && (
+        <>
+          {/* Buttons to control the recorder - Only display them after all prerequisites have loaded */}
+          <button onClick={startRecording}>Record</button>
+          <button onClick={stopRecording}>Stop</button>
+        </>
+      )}
+    </div>
+  );
+};
+
+export default SingleRecorder;
+```
+
+### Inserting multiple recorders into the page
+
+This example demonstrates how to insert multiple Pipe recorders into the page.
 
 ```jsx
 import { useState } from "react";
@@ -122,7 +186,7 @@ const MultipleRecorders = () => {
 
     // Store PipeSDK into a state for controlling the recorders later
     setPipeSdk(PipeSDK);
-  }, true); // Adding "true" will make it so that Pipe is loaded from our S1 client delivery servers
+  });
 
   // Function to start a new recording using PipeSDK
   const startRecording = (recorderId) => {
@@ -204,3 +268,13 @@ For more detailed embed code options, refer to the [Addpipe Embed Code Options](
 - Screen and Camera Capture
 - React Hooks for Media
 
+# Changelog
+
+## 1.1.0
+
+- Added `options` parameter to `usePipeSDK` for enhanced configuration
+- Added support for custom build versions via `buildSlug` option
+- Added support for loading pipe.js and pipe.css from both CDN and S1
+
+## 1.0.0
+- Initial release

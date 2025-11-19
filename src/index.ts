@@ -87,15 +87,21 @@ export type PipeSDKObject = {
   [key: string]: any;
 };
 
+export interface PipeSDKOptions {
+  useS1?: boolean;
+  buildSlug?: string;
+}
+
 export type UsePipeSDK = (
   callback: (PipeSDK: PipeSDKObject) => void,
-  useS1?: boolean
+  options?: PipeSDKOptions
 ) => {
   isLoaded: boolean;
 };
 
-export const usePipeSDK: UsePipeSDK = (callback, useS1 = false) => {
+export const usePipeSDK: UsePipeSDK = (callback, options = {}) => {
   const [isLoaded, setIsLoaded] = useState<boolean>(false);
+  const { useS1 = false, buildSlug } = options;
 
   useEffect(() => {
     const loadPipeSDK = () => {
@@ -111,16 +117,28 @@ export const usePipeSDK: UsePipeSDK = (callback, useS1 = false) => {
         // Where to load the resources from: CDN or S1
         const loadFrom = useS1 ? "s1" : "cdn";
 
+        let scriptSrc: string;
+        let stylesheetHref: string;
+
+        // Use custom build slug URL if provided, otherwise use default
+        if (buildSlug) {
+          scriptSrc = `https://${loadFrom}.addpipe.com/releases/2.0/${buildSlug}/pipe.js`;
+          stylesheetHref = `https://${loadFrom}.addpipe.com/releases/2.0/${buildSlug}/pipe.css`;
+        } else {
+          scriptSrc = `https://${loadFrom}.addpipe.com/2.0/pipe.min.js`;
+          stylesheetHref = `https://${loadFrom}.addpipe.com/2.0/pipe.css`;
+        }
+
         // Insert pipe.js
         const script = document.createElement("script");
-        script.src = `https://${loadFrom}.addpipe.com/2.0/pipe.min.js`;
+        script.src = scriptSrc;
         script.onload = loadPipeSDK;
         document.head.appendChild(script);
 
         // Insert pipe.css
         const stylesheet = document.createElement("link");
         stylesheet.rel = "stylesheet";
-        stylesheet.href = `https://${loadFrom}.addpipe.com/2.0/pipe.css`;
+        stylesheet.href = stylesheetHref;
         document.head.appendChild(stylesheet);
       } else {
         loadPipeSDK();
