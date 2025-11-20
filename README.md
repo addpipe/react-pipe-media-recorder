@@ -92,10 +92,9 @@ const SingleRecorder = () => {
 
 export default SingleRecorder;
 ```
+### Inserting a single recorder into the page that is loaded from our EU client delivery servers (S1), and request a specific version of pipe.js (build slug)
 
-### Inserting a single recorder into the page, loading from S1 and using a custom version
-
-In this example, we insert a single Pipe recorder into the page and control it using the recorder's API (`record()` and `stopVideo()`). We load it from S1 and use a custom build version.
+In this example, we insert a single Pipe recorder into the page and control it using the recorder's API (`record()` and `stopVideo()`). We load it from our EU client delivery servers (S1) and use a specific version of `pipe.js` and `pipe.css`.
 
 ```jsx
 import { useState } from "react";
@@ -106,6 +105,12 @@ const SingleRecorder = () => {
   // Storing the generated recorder inside of a state - optional
   const [recorder, setRecorder] = useState(null);
   const [canRecord, setCanRecord] = useState(false);
+
+  // Custom options
+  const options = {
+    useS1: true, // Load from our EU client delivery servers (S1)
+    buildSlug: "BUILD_SLUG" // Request a specific version of pipe.js and pipe.css
+  }
 
   // Using the Pipe recorder custom hook with S1 and custom build slug
   const { isLoaded } = usePipeSDK((PipeSDK) => {
@@ -122,10 +127,7 @@ const SingleRecorder = () => {
         setCanRecord(true);
       }
     });
-  }, {
-    useS1: true,
-    buildSlug: "BUILD_SLUG"
-  });
+  }, options);
 
   // Function to start a new recording using the recorder's API
   const startRecording = () => {
@@ -268,13 +270,6 @@ For more detailed embed code options, refer to the [Addpipe Embed Code Options](
 - Screen and Camera Capture
 - React Hooks for Media
 
-# Changelog
+# Releases
 
-## 1.1.0
-
-- Added `options` parameter to `usePipeSDK` for enhanced configuration
-- Added support for custom build versions via `buildSlug` option
-- Added support for loading pipe.js and pipe.css from both CDN and S1
-
-## 1.0.0
-- Initial release
+All releases are available [here](https://github.com/addpipe/react-pipe-media-recorder/releases)
