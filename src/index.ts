@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 declare global {
   interface Window {
@@ -99,40 +99,57 @@ export type UsePipeSDK = (
   isLoaded: boolean;
 };
 
+// Track loading state globally to prevent duplicate script insertions
+let loadingPromise: Promise<any> | null = null;
+let loadError: Error | null = null;
+let loadAttempts = 0;
+const MAX_LOAD_ATTEMPTS = 3;
+
 export const usePipeSDK: UsePipeSDK = (callback, options = {}) => {
   const [isLoaded, setIsLoaded] = useState<boolean>(false);
+  const [error, setError] = useState<Error | null>(null);
   const { useS1 = false, buildSlug } = options;
+  const callbackRef = useRef(callback);
+
+  // Keep callback ref updated
+  useEffect(() => {
+    callbackRef.current = callback;
+  }, [callback]);
 
   useEffect(() => {
-    const loadPipeSDK = () => {
-      if (window.PipeSDK) {
-        callback(window.PipeSDK);
-        setIsLoaded(true);
-      }
-    };
+    const loadFrom = useS1 ? "s1" : "cdn";
+    
+    const scriptSrc = buildSlug
+      ? `https://${loadFrom}.addpipe.com/releases/2.0/${buildSlug}/pipe.js`
+      : `https://${loadFrom}.addpipe.com/2.0/pipe.min.js`;
+    
+    const stylesheetHref = buildSlug
+      ? `https://${loadFrom}.addpipe.com/releases/2.0/${buildSlug}/pipe.css`
+      : `https://${loadFrom}.addpipe.com/2.0/pipe.css`;
 
-    if (!isLoaded) {
-      // Only insert into head if global instance of PipeSDK does not already exists
-      if (!window.PipeSDK) {
-        // Where to load the resources from: CDN or S1
-        const loadFrom = useS1 ? "s1" : "cdn";
-
-        let scriptSrc: string;
-        let stylesheetHref: string;
-
-        // Use custom build slug URL if provided, otherwise use default
-        if (buildSlug) {
-          scriptSrc = `https://${loadFrom}.addpipe.com/releases/2.0/${buildSlug}/pipe.js`;
-          stylesheetHref = `https://${loadFrom}.addpipe.com/releases/2.0/${buildSlug}/pipe.css`;
-        } else {
-          scriptSrc = `https://${loadFrom}.addpipe.com/2.0/pipe.min.js`;
-          stylesheetHref = `https://${loadFrom}.addpipe.com/2.0/pipe.css`;
-        }
-
+    const insertScriptAndStylesheet = () => {
+      loadAttempts++;
+      
+      loadingPromise = new Promise((resolve, reject) => {
         // Insert pipe.js
         const script = document.createElement("script");
         script.src = scriptSrc;
-        script.onload = loadPipeSDK;
+        
+        script.onload = () => {
+          loadError = null;
+          loadAttempts = 0; // Reset attempts on success
+          resolve(window.PipeSDK);
+          if (window.PipeSDK) {
+            callbackRef.current(window.PipeSDK);
+            setIsLoaded(true);
+          }
+        };
+        
+        script.onerror = () => {
+          loadError = new Error(`Failed to load PipeSDK script (attempt ${loadAttempts}/${MAX_LOAD_ATTEMPTS})`);
+          reject(loadError);
+        };
+        
         document.head.appendChild(script);
 
         // Insert pipe.css
@@ -140,15 +157,99 @@ export const usePipeSDK: UsePipeSDK = (callback, options = {}) => {
         stylesheet.rel = "stylesheet";
         stylesheet.href = stylesheetHref;
         document.head.appendChild(stylesheet);
-      } else {
-        loadPipeSDK();
-      }
-    } else {
-      loadPipeSDK();
-    }
-  }, [callback]);
+      });
+    };
 
-  return { isLoaded };
+    const loadPipeSDK = async () => {
+      // If PipeSDK already exists, use it immediately
+      if (window.PipeSDK) {
+        callbackRef.current(window.PipeSDK);
+        setIsLoaded(true);
+        return;
+      }
+
+      // If we've exceeded max attempts and there's an error, don't try again
+      if (loadAttempts >= MAX_LOAD_ATTEMPTS && loadError) {
+        setError(loadError);
+        return;
+      }
+
+      // Check if script already exists in the DOM
+      const existingScript = document.querySelector(`script[src="${scriptSrc}"]`);
+      
+      if (existingScript) {
+        // Script exists, wait for it to load
+        if (loadingPromise) {
+          // Reuse existing loading promise
+          try {
+            await loadingPromise;
+            if (window.PipeSDK) {
+              callbackRef.current(window.PipeSDK);
+              setIsLoaded(true);
+            }
+          } catch (error) {
+            console.error('PipeSDK failed to load:', error);
+            setError(error as Error);
+            // If we haven't exceeded max attempts, try again
+            if (loadAttempts < MAX_LOAD_ATTEMPTS) {
+              existingScript.remove();
+              loadingPromise = null;
+              insertScriptAndStylesheet();
+            }
+          }
+        } else {
+          // Script exists but no loading promise, create one to wait for it
+          loadingPromise = new Promise((resolve, reject) => {
+            // Check if it's already loaded
+            if (window.PipeSDK) {
+              resolve(window.PipeSDK);
+              return;
+            }
+            
+            const onLoad = () => {
+              existingScript.removeEventListener('load', onLoad);
+              existingScript.removeEventListener('error', onError);
+              resolve(window.PipeSDK);
+            };
+            
+            const onError = () => {
+              existingScript.removeEventListener('load', onLoad);
+              existingScript.removeEventListener('error', onError);
+              loadError = new Error('Script failed to load');
+              reject(loadError);
+            };
+            
+            existingScript.addEventListener('load', onLoad);
+            existingScript.addEventListener('error', onError);
+          });
+
+          try {
+            await loadingPromise;
+            if (window.PipeSDK) {
+              callbackRef.current(window.PipeSDK);
+              setIsLoaded(true);
+            }
+          } catch (error) {
+            console.error('PipeSDK failed to load:', error);
+            setError(error as Error);
+            // If we haven't exceeded max attempts, try again
+            if (loadAttempts < MAX_LOAD_ATTEMPTS) {
+              existingScript.remove();
+              loadingPromise = null;
+              insertScriptAndStylesheet();
+            }
+          }
+        }
+      } else {
+        // No script exists, insert it
+        insertScriptAndStylesheet();
+      }
+    };
+
+    loadPipeSDK();
+  }, [useS1, buildSlug]);
+
+  return { isLoaded, error };
 };
 
 export default usePipeSDK;
