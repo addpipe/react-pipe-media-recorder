@@ -1,10 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-
-declare global {
-  interface Window {
-    PipeSDK: PipeSDKObject;
-  }
-}
+import PipeSDKClient from "@addpipe/pipe-recording-client";
+import "@addpipe/pipe-recording-client/pipe.min.css";
 
 export type EmbedCodeOptions = {
   accountHash: string;
@@ -99,17 +95,22 @@ export type UsePipeSDK = (
   isLoaded: boolean;
 };
 
-// Track loading state globally to prevent duplicate script insertions
-let loadingPromise: Promise<any> | null = null;
-let loadError: Error | null = null;
-let loadAttempts = 0;
-const MAX_LOAD_ATTEMPTS = 3;
+// The bundled recording client exposes the same global `PipeSDK` object that
+// pipe.min.js used to set at runtime. Casting keeps the public callback type
+// (`PipeSDKObject`, which includes runtime-only helpers such as `getRecorderById`)
+// unchanged for existing implementations.
+const PipeSDK = PipeSDKClient as unknown as PipeSDKObject;
+
+// Emit the `buildSlug` deprecation warning at most once per session.
+let hasWarnedBuildSlug = false;
 
 export const usePipeSDK: UsePipeSDK = (callback, options = {}) => {
   const [isLoaded, setIsLoaded] = useState<boolean>(false);
   const [error, setError] = useState<Error | null>(null);
   const { useS1 = false, buildSlug } = options;
   const callbackRef = useRef(callback);
+  // Ensure the callback runs only once per hook instance.
+  const hasInitialized = useRef(false);
 
   // Keep callback ref updated
   useEffect(() => {
@@ -117,136 +118,34 @@ export const usePipeSDK: UsePipeSDK = (callback, options = {}) => {
   }, [callback]);
 
   useEffect(() => {
-    const loadFrom = useS1 ? "s1" : "cdn";
-    
-    const scriptSrc = buildSlug
-      ? `https://${loadFrom}.addpipe.com/releases/2.0/${buildSlug}/pipe.js`
-      : `https://${loadFrom}.addpipe.com/2.0/pipe.min.js`;
-    
-    const stylesheetHref = buildSlug
-      ? `https://${loadFrom}.addpipe.com/releases/2.0/${buildSlug}/pipe.css`
-      : `https://${loadFrom}.addpipe.com/2.0/pipe.css`;
+    if (hasInitialized.current) return;
 
-    const insertScriptAndStylesheet = () => {
-      loadAttempts++;
-      
-      loadingPromise = new Promise((resolve, reject) => {
-        // Insert pipe.js
-        const script = document.createElement("script");
-        script.src = scriptSrc;
-        
-        script.onload = () => {
-          loadError = null;
-          loadAttempts = 0; // Reset attempts on success
-          resolve(window.PipeSDK);
-          if (window.PipeSDK) {
-            callbackRef.current(window.PipeSDK);
-            setIsLoaded(true);
-          }
-        };
-        
-        script.onerror = () => {
-          loadError = new Error(`Failed to load PipeSDK script (attempt ${loadAttempts}/${MAX_LOAD_ATTEMPTS})`);
-          reject(loadError);
-        };
-        
-        document.head.appendChild(script);
+    // `buildSlug` used to request a specific pipe.js/pipe.css release. The client
+    // version is now pinned by the installed `@addpipe/pipe-recording-client`
+    // package, so the option no longer has any effect.
+    if (buildSlug && !hasWarnedBuildSlug) {
+      hasWarnedBuildSlug = true;
+      console.warn(
+        "[react-pipe-media-recorder] The `buildSlug` option is deprecated and has no effect. " +
+          "The recording client version is now determined by the installed " +
+          "`@addpipe/pipe-recording-client` package version."
+      );
+    }
 
-        // Insert pipe.css
-        const stylesheet = document.createElement("link");
-        stylesheet.rel = "stylesheet";
-        stylesheet.href = stylesheetHref;
-        document.head.appendChild(stylesheet);
-      });
-    };
-
-    const loadPipeSDK = async () => {
-      // If PipeSDK already exists, use it immediately
-      if (window.PipeSDK) {
-        callbackRef.current(window.PipeSDK);
-        setIsLoaded(true);
-        return;
+    try {
+      // Choose the delivery server before any recorder is inserted. `useS1` loads
+      // assets from Pipe's EU client-delivery servers (S1); the default is the CDN.
+      if (typeof PipeSDK.setServer === "function") {
+        PipeSDK.setServer(useS1 ? "s1" : "cdn");
       }
 
-      // If we've exceeded max attempts and there's an error, don't try again
-      if (loadAttempts >= MAX_LOAD_ATTEMPTS && loadError) {
-        setError(loadError);
-        return;
-      }
-
-      // Check if script already exists in the DOM
-      const existingScript = document.querySelector(`script[src="${scriptSrc}"]`);
-      
-      if (existingScript) {
-        // Script exists, wait for it to load
-        if (loadingPromise) {
-          // Reuse existing loading promise
-          try {
-            await loadingPromise;
-            if (window.PipeSDK) {
-              callbackRef.current(window.PipeSDK);
-              setIsLoaded(true);
-            }
-          } catch (error) {
-            console.error('PipeSDK failed to load:', error);
-            setError(error as Error);
-            // If we haven't exceeded max attempts, try again
-            if (loadAttempts < MAX_LOAD_ATTEMPTS) {
-              existingScript.remove();
-              loadingPromise = null;
-              insertScriptAndStylesheet();
-            }
-          }
-        } else {
-          // Script exists but no loading promise, create one to wait for it
-          loadingPromise = new Promise((resolve, reject) => {
-            // Check if it's already loaded
-            if (window.PipeSDK) {
-              resolve(window.PipeSDK);
-              return;
-            }
-            
-            const onLoad = () => {
-              existingScript.removeEventListener('load', onLoad);
-              existingScript.removeEventListener('error', onError);
-              resolve(window.PipeSDK);
-            };
-            
-            const onError = () => {
-              existingScript.removeEventListener('load', onLoad);
-              existingScript.removeEventListener('error', onError);
-              loadError = new Error('Script failed to load');
-              reject(loadError);
-            };
-            
-            existingScript.addEventListener('load', onLoad);
-            existingScript.addEventListener('error', onError);
-          });
-
-          try {
-            await loadingPromise;
-            if (window.PipeSDK) {
-              callbackRef.current(window.PipeSDK);
-              setIsLoaded(true);
-            }
-          } catch (error) {
-            console.error('PipeSDK failed to load:', error);
-            setError(error as Error);
-            // If we haven't exceeded max attempts, try again
-            if (loadAttempts < MAX_LOAD_ATTEMPTS) {
-              existingScript.remove();
-              loadingPromise = null;
-              insertScriptAndStylesheet();
-            }
-          }
-        }
-      } else {
-        // No script exists, insert it
-        insertScriptAndStylesheet();
-      }
-    };
-
-    loadPipeSDK();
+      hasInitialized.current = true;
+      callbackRef.current(PipeSDK);
+      setIsLoaded(true);
+    } catch (err) {
+      console.error("PipeSDK failed to initialize:", err);
+      setError(err as Error);
+    }
   }, [useS1, buildSlug]);
 
   return { isLoaded, error };
