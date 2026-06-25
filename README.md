@@ -9,6 +9,8 @@ With `@addpipe/react-pipe-media-recorder`, you can:
 
 **Note**: You will need a free trial or paid account with [Addpipe](https://addpipe.com) to use this package.
 
+> **How it loads:** As of version `1.3.0`, the recording client is bundled directly via the [`@addpipe/pipe-recording-client`](https://www.npmjs.com/package/@addpipe/pipe-recording-client) npm package instead of being injected into the page through remote `<script>`/`<link>` tags. The Pipe recording client is imported by the hook, so your bundler (Vite, webpack, Next.js, CRA, …) handles them automatically, no extra setup is required. The recorder still communicates with Pipe's servers at runtime; only how the client is loaded has changed. The recording client version follows this package's `@addpipe/pipe-recording-client` dependency range (`^2.0.0`); see [Pinning a specific recording-client version](#pinning-a-specific-recording-client-version) if you need to lock it to an exact release.
+
 ## Features:
 
 - **Video, Audio, and Screen Recording**: Add high-quality media recording functionality to any React app, supporting both desktop and mobile devices.
@@ -92,9 +94,11 @@ const SingleRecorder = () => {
 
 export default SingleRecorder;
 ```
-### Inserting a single recorder into the page that is loaded from our EU client delivery servers (S1), and request a specific version of pipe.js (build slug)
+### Inserting a single recorder loaded from our EU client delivery servers (S1)
 
-In this example, we insert a single Pipe recorder into the page and control it using the recorder's API (`record()` and `stopVideo()`). We load it from our EU client delivery servers (S1) and use a specific version of `pipe.js` and `pipe.css`.
+In this example, we insert a single Pipe recorder into the page and control it using the recorder's API (`record()` and `stopVideo()`). We load its static assets from our EU client delivery servers (S1) instead of the default global CDN by passing `useS1: true`.
+
+> **Deprecated:** The `buildSlug` option no longer has any effect and is kept only for backward compatibility. It used to request a specific `pipe.min.js`/`pipe.min.css` release; the recording-client version is now determined by the installed [`@addpipe/pipe-recording-client`](https://www.npmjs.com/package/@addpipe/pipe-recording-client) dependency. Passing `buildSlug` logs a one-time console warning. To control the client version, see [Pinning a specific recording-client version](#pinning-a-specific-recording-client-version) below.
 
 ```jsx
 import { useState } from "react";
@@ -109,10 +113,9 @@ const SingleRecorder = () => {
   // Custom options
   const options = {
     useS1: true, // Load from our EU client delivery servers (S1)
-    buildSlug: "BUILD_SLUG" // Request a specific version of pipe.js and pipe.css
   }
 
-  // Using the Pipe recorder custom hook with S1 and custom build slug
+  // Using the Pipe recorder custom hook with S1
   const { isLoaded } = usePipeSDK((PipeSDK) => {
     // Check to make sure the code below is only executed on the initial load
     if (isLoaded) return;
@@ -158,6 +161,34 @@ const SingleRecorder = () => {
 
 export default SingleRecorder;
 ```
+
+### Pinning a specific recording-client version
+
+This package depends on [`@addpipe/pipe-recording-client`](https://www.npmjs.com/package/@addpipe/pipe-recording-client) with the range `^2.0.0`, so by default you get the latest compatible `2.x` recording client. This is the modern replacement for the old `buildSlug` option.
+
+To lock the recording client to an exact client version, override the dependency from **your own** project's `package.json` (not this package's). The recording client bundled into your app is whatever version resolves there.
+
+**npm** (v8.3+) - add an [`overrides`](https://docs.npmjs.com/cli/v10/configuring-npm/package-json#overrides) field:
+
+```json
+{
+  "overrides": {
+    "@addpipe/pipe-recording-client": "2.0.0"
+  }
+}
+```
+
+**Yarn / pnpm** - add a [`resolutions`](https://classic.yarnpkg.com/lang/en/docs/selective-version-resolutions/) field:
+
+```json
+{
+  "resolutions": {
+    "@addpipe/pipe-recording-client": "2.0.0"
+  }
+}
+```
+
+Then reinstall (`npm install`, `yarn`, or `pnpm install`) and confirm the resolved version with `npm ls @addpipe/pipe-recording-client`. Available versions are listed on the [recording-client versions page](https://www.npmjs.com/package/@addpipe/pipe-recording-client?activeTab=versions).
 
 ### Inserting multiple recorders into the page
 
